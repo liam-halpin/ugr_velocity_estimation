@@ -75,6 +75,36 @@ def plot():
     plt.show()
 
 
+def calculate_tyre_loads(loads, accel, load_transfer, weight):
+    """ Calculates lateral and longitudinal tyre loads 
+    
+        Inputs:
+        - loads (loads of each tyre - initially 0)
+        - accel (acceleration in either x/y direction)
+        - load_transfer (longitudinal/latitudinal load transfer)
+        - weight (weight of the car)
+
+        Outputs:
+        - loads (longitudinal/latitudinal tyre loads)
+    """
+
+    # acceleration +'ve => +'ve for rear wheels & -'ve for front wheels
+    if accel > 0:
+        for i in range(len(loads)):
+            if (i % 2 == 0):
+                loads[i] = (weight - load_transfer) / 2
+            else:
+                loads[i] = (weight + load_transfer) / 2
+    else:
+        for i in range(len(loads)):
+            if (i % 2 == 0):
+                loads[i] = (weight + load_transfer) / 2
+            else:
+                loads[i] = (weight - load_transfer) / 2
+    
+    return loads
+
+
 def prediction(X_hat_t_1, P_t_1, Q_t):
     """ Estimates the next value for the state vector
 
@@ -197,7 +227,7 @@ def extended_kalman_filter(X_hat_t, P_t, Q_t, R_t):
 
 #=================================================================================================================#
 
-# Longitudinal Tyre Stiffness #
+# Variables we need
 
 fric_coefficient = 1.5
 wheel_base = 1.53    # UGR's car wheel_base (m)
@@ -205,25 +235,18 @@ height_CoG = 0.26    # UGR's car w/ driver (m) (300mm w/ driver 250-260mm w/o dr
 mass = 201.5    # 201.5kg w/o driver and 227kg (2018 UGR)
 car_weight = mass * 9.8
 
+#=================================================================================================================#
+
+# Longitudinal Tyre Stiffness #
+
 load_transfer_long = car_weight * accel_x * height_CoG / wheel_base    # update step (probably)
 
 front_left = front_right = rear_left = rear_right = 0.0    # loads on each tyre
 
 tyre_loads = [front_left, rear_left, front_right, rear_right]
 
-# acceleration +'ve => +'ve for rear wheels & -'ve for front wheels
-if accel_x > 0:
-    for i in range(len(tyre_loads)):
-        if (i % 2 == 0):
-            tyre_loads[i] = (car_weight - load_transfer_long) / 2
-        else:
-            tyre_loads[i] = (car_weight + load_transfer_long) / 2
-else:
-    for i in range(len(tyre_loads)):
-        if (i % 2 == 0):
-            tyre_loads[i] = (car_weight + load_transfer_long) / 2
-        else:
-            tyre_loads[i] = (car_weight - load_transfer_long) / 2
+# tyre loads (longitudinal - x direction)
+tyre_loads = calculate_tyre_loads(tyre_loads, accel_x, load_transfer_long, car_weight)
 
 front_left_stiff = front_right_stiff = rear_left_stiff = rear_right_stiff = 0
 
@@ -242,19 +265,8 @@ load_transfer_lat = car_weight * accel_y * height_CoG / track_width
 
 lateral_tyre_stiffnesses = [front_left_stiff, rear_left_stiff, front_right_stiff, rear_right_stiff]
 
-# acceleration +'ve => +'ve for rear wheels & -'ve for front wheels (PUT IN FUNCTION)
-if accel_y > 0:
-    for i in range(len(tyre_loads)):
-        if (i % 2 == 0):
-            tyre_loads[i] = (car_weight - load_transfer_lat) / 2
-        else:
-            tyre_loads[i] = (car_weight + load_transfer_lat) / 2
-else:
-    for i in range(len(tyre_loads)):
-        if (i % 2 == 0):
-            tyre_loads[i] = (car_weight + load_transfer_lat) / 2
-        else:
-            tyre_loads[i] = (car_weight - load_transfer_lat) / 2
+# tyre loads (latitudinal - y direction)
+tyre_loads = calculate_tyre_loads(tyre_loads, accel_y, load_transfer_lat, car_weight)
 
 # formula given in degrees but all measurements in radians?????
 for i in range(len(lateral_tyre_stiffnesses)):
@@ -264,7 +276,12 @@ for i in range(len(lateral_tyre_stiffnesses)):
 
 # F_m Forumla?? #
 
+slip_angle = delta - arctan(vel_x / vel_y)
 
+F_x1 = longitudinal_tyre_stiffnesses * slip_ratio
+F_y1 = lateral_tyre_stiffnesses * slip_angle
+
+f_M = (1/yaw_of_intertia) * ()
 
 #=================================================================================================================#
 
