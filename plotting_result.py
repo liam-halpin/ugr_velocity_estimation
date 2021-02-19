@@ -19,9 +19,17 @@ import os
 import sys
 import numpy as np
 import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 
 np.set_printoptions(threshold=3)
 np.set_printoptions(suppress=True)
+
+def check_dir(dir_path):
+    """ Checks if dataset directory exists at path, otherwise,
+       create the new directory"""
+    if not os.path.exists(dir_path):
+        os.mkdir(dir_path)
+
 
 def bytespdate2num(fmt, encoding='utf-8'):
     """ Formats date from dataset """
@@ -29,6 +37,42 @@ def bytespdate2num(fmt, encoding='utf-8'):
         s = b.decode(encoding)
         return mdates.datestr2num(s)
     return bytesconverter
+
+
+def plot():
+    """ Plots the results from the EKF
+
+    Outputs:
+     - Result of the EKF algorithm
+     - x-axis -> x position
+     - y-axis -> y position
+     - normal line -> EKF estimate
+     - '+' -> GPS measurements
+     - arrows -> estimated heading
+    """
+    print("Plotting graph...")
+    fig = plt.figure(figsize=(16,9))  # change this if you need to
+
+    # plots the x position, y position and heading
+    plt.quiver(x_pos, y_pos, np.cos(head), np.sin(head), color='#FFFF00', units='xy', width=0.05, scale=0.5)
+    
+    # plots estimated state from the EKF
+    plt.plot(x_pos, y_pos, label='Estimated Position from EKF', c='#000000', lw=2)
+
+    # plots each measurement from GPS sensor    
+    plt.scatter(change_x[::5], change_y[::5], s=50, label='GPS Measurements', marker='+')
+
+    # plot start and finish (initial pos and final pos)
+    plt.scatter(x_pos[0], y_pos[0], s=60, label='First Measurement', c='#006400')
+    plt.scatter(x_pos[-1], y_pos[-1], s=60, label='Last Measurement', c='#FF0000')
+    
+    # graph format
+    plt.xlabel('X Position (metres)')
+    plt.ylabel('Y Position (metres)')
+    plt.title('Extended Kalman Filter')
+    plt.legend(loc='best')
+    plt.axis('equal')
+    plt.show()
 
 
 def calculate_tyre_loads(loads, accel, load_transfer, weight):
@@ -43,6 +87,7 @@ def calculate_tyre_loads(loads, accel, load_transfer, weight):
         Outputs:
         - loads (longitudinal/latitudinal tyre loads)
     """
+
     # acceleration +'ve => +'ve for rear wheels & -'ve for front wheels
     if accel > 0:
         for i in range(len(loads)):
@@ -175,7 +220,7 @@ def extended_kalman_filter(X_hat_t, P_t, Q_t, R_t):
         X_hat_t = X_t    # updated predictions
         P_hat_t = P_t    # updated covariance matrices
     
-    return X_hat_t, P_hat_t
+    plot()
 
 
 """ DISCLAIMER !!!! DO NOT TOUCH ANYTHING BELOW THIS OR I WILL FIND WHERE YOU LIVE !!!! """
@@ -254,10 +299,32 @@ intertia_of_wheel = 0.5 * wheel_radius**2 * mass
 
 #=================================================================================================================#
 
+
+
+
+
+
+
+
+
+
+
+
 # driver code
 if __name__ == "__main__":
     # set path variables
     PATH = "data/data.csv"
+
+    # check if the dataset file exists
+    # try:
+    #     PATH = sys.argv[1]
+    #     if not os.path.exists:
+    #         print("[!] Error: File does not exist [!]")
+    #         sys.exit(2)
+    # except (FileNotFoundError, IsADirectoryError):
+    #     print("[!] Error: Incorrect arguments passed [!]")
+    #     print("Usage: python ekf.py <path_to_dataset>")
+    #     sys.exit(2)
 
     # read in the data from the .csv dataset file
     # !!!! CHANGE THIS FOR DIFFERENT DATASET FILES !!!!
