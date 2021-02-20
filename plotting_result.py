@@ -346,7 +346,12 @@ if __name__ == "__main__":
                           heading[0] * np.pi / 180.0,    # initial heading (radians)
                           speed[0] / 3.6,                # initial speed (m/s)
                           yawrate[0] * np.pi / 180.0,    # initial yawrate (radians)
-                          accel_x[0]]])                  # initial acceleration (m/s^-2) 
+                          accel_x[0],                    # initial acceleration in x direction (m/s^-2) 
+                          accel_y[0],                    # initial acceleration in y direction (m/s^-2)
+                          slip_ratio_FR[0],              # slip ratio of front right wheel
+                          slip_ratio_RR[0],              # slip ratio of rear right wheel
+                          slip_ratio_FL[0],              # slip ratio of front left wheel
+                          slip_ratio_RL[0]]])            # slip ratio of front
 
     X_hat_t = X_hat_t.T  # transpose to make 6x1
 

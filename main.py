@@ -2,16 +2,16 @@
 
     Currently runs from dataset as input:
     - uses the data from the sensors to calculate the predicted state vector
-    - state vector includes 6 states:
-            gps (x), gps (y), heading, speed, yawrate, acceleration
+    - state vector includes 12 states:
+            gps (x), gps (y), heading, speed (x), speed(y), yawrate, acceleration (x), acceleration(y), slip ratios (x4)
     - failure detection:
         > null errors
         > outlier values
         > drift values
     
     Output:
-    - 6x1 array representing the state estimate
-    - 6x6 array representing the state estimate's covariance (row per sensor)
+    - 12x1 array representing the state estimate
+    - 12x6 array representing the state estimate's covariance (row per estimate)
 """
 #!/usr/bin/python
 
@@ -22,14 +22,6 @@ import matplotlib.dates as mdates
 
 np.set_printoptions(threshold=3)
 np.set_printoptions(suppress=True)
-
-def bytespdate2num(fmt, encoding='utf-8'):
-    """ Formats date from dataset """
-    def bytesconverter(b):
-        s = b.decode(encoding)
-        return mdates.datestr2num(s)
-    return bytesconverter
-
 
 def calculate_tyre_loads(loads, accel, load_transfer, weight):
     """ Calculates lateral and longitudinal tyre loads 
@@ -64,25 +56,32 @@ def prediction(X_hat_t_1, P_t_1, Q_t):
     """ Estimates the next value for the state vector
 
         Inputs:
-        - X_hat_t_1 (the previous measurement)
-        - P_t_1 (the previous measurement's covariance matrix)
-        - Q_t (the measurement noise matrix)
+        - X_hat_t_1 (12x1 matrix: the previous measurement)
+        - P_t_1 (12x6 matrix: the previous measurement's covariance matrix)
+        - Q_t (12x1 matrix: the measurement noise matrix)
         
         Outputs:
-        - X_hat_t (the predicted value of the state estimate)
-        - P_t_1 (the predicted state estimate's covariance matrix)
+        - X_hat_t (12x1 matrix:  the predicted value of the state estimate)
+        - P_t_1 (12x6 matrix: the predicted state estimate's covariance matrix)
     """
     X_hat = X_hat_t_1
 
-    dt = 1.0 / 50.0
+    dt = 1.0 / 50.0    # rate of change
 
     X_hat_t[0] = X_hat_t_1[0] + X_hat_t_1[3]*dt * np.cos(X_hat_t_1[2])
     X_hat_t[1] = X_hat_t_1[1] + X_hat_t_1[3]*dt * np.sin(X_hat_t_1[2])
     X_hat_t[2] = X_hat_t_1[2]
     X_hat_t[3] = X_hat_t_1[3] + X_hat_t_1[5]*dt
-    X_hat_t[4] = 0.0000001
-    X_hat_t[5] = X_hat_t_1[5]
+    X_hat_t[4] = X_hat_t_1[3] + X_hat_t_1[5]*dt
+    X_hat_t[5] = 0.0000001
+    X_hat_t[6] = X_hat_t_1[6]
+    X_hat_t[7] = X_hat_t_1[7]
+    X_hat_t[8] = X_hat_t_1[8]
+    X_hat_t[9] = X_hat_t_1[9]
+    X_hat_t[10] = X_hat_t_1[10]
+    X_hat_t[11] = X_hat_t_1[11]
 
+    # DO STUFF WITH THIS
     # Calculating the Jacobian, A, with respect to the state vector X_hat_t
     J_A_13 = float((X_hat_t[3]/X_hat_t[4]) * (np.cos(X_hat_t[4]*dt+X_hat_t[2]) - np.cos(X_hat_t[2])))
     J_A_14 = float((1.0/X_hat_t[4]) * (np.sin(X_hat_t[4]*dt+X_hat_t[2]) - np.sin(X_hat_t[2])))
@@ -92,15 +91,21 @@ def prediction(X_hat_t_1, P_t_1, Q_t):
     J_A_24 = float((1.0/X_hat_t[4]) * (-np.cos(X_hat_t[4]*dt+X_hat_t[2]) + np.cos(X_hat_t[2])))
     J_A_25 = float((dt*X_hat_t[3]/X_hat_t[4])*np.sin(X_hat_t[4]*dt+X_hat_t[2]) - (X_hat_t[3]/X_hat_t[4]**2)*(-np.cos(X_hat_t[4]*dt+X_hat_t[2]) + np.cos(X_hat_t[2])))
 
-    # jacobian matrix of A
+    # jacobian matrix of A (CHANGE NUMBERS)
     J_A = np.matrix([[1.0, 0.0, J_A_13, J_A_14, J_A_15, 0.0],
-                    [0.0, 1.0, J_A_23, J_A_24, J_A_25, 0.0],
-                    [0.0, 0.0, 1.0, 0.0, dt, 0.0],
-                    [0.0, 0.0, 0.0, 1.0, 0.0, dt],
-                    [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]])
+                     [0.0, 1.0, J_A_23, J_A_24, J_A_25, 0.0],
+                     [0.0, 0.0, 1.0, 0.0, dt, 0.0],
+                     [0.0, 0.0, 0.0, 1.0, 0.0, dt],
+                     [0.0, 0.0, 0.0, 1.0, 0.0, dt],
+                     [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]])
     
-    # error covariance in measurements (6x1 matrix)
+    # error covariance in measurements (12x6 matrix)
     P_t_1 = J_A * P_t_1 * J_A.T + Q_t
 
     return X_hat_t, P_t_1
@@ -110,24 +115,35 @@ def update(X_hat_t, P_t, Z_t, R_t):
     """ Updates the prediction accounting for previous values
 
         Inputs:
-        - X_hat_t (the current state estimate)
-        - P_t (the current state estimate's covariance matrix)
+        - X_hat_t (12x1 matrix: the current state estimate)
+        - P_t (12x6 matrix: the current state estimate's covariance matrix)
         - Z_t (the conditioning matrix)
-        - R_t (the measurement noise matrix)
+        - R_t (12x1 matrix: the measurement noise matrix)
 
         Outputs:
-        - X_t (the new updated state estimate)
-        - P_t (the new updated state estimate's covariance matrix)
+        - X_t (12x1 matrix: the new updated state estimate)
+        - P_t (12x6 matrix: the new updated state estimate's covariance matrix)
     """
     hx = np.matrix([[float(X_hat_t[0])], [float(X_hat_t[1])], [float(X_hat_t[3])],
-                    [float(X_hat_t[4])], [float(X_hat_t[5])]])
+                    [float(X_hat_t[4])], [float(X_hat_t[5])], [float(X_hat_t[6])],
+                    [float(X_hat_t[7])], [float(X_hat_t[8])], [float(X_hat_t[9])],
+                    [float(X_hat_t[10])], [float(X_hat_t[11])])
  
+    # change this (check maths obvs not correct)
     J_H = np.matrix([[1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                      [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                     [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                     [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
                      [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
                      [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
-                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]])      
+                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                     [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                     [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                     [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                     [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]])
     
+    # calculate kalman gain
     S = J_H * P_t * J_H.T + R_t
     K = (P_t * J_H.T) * np.linalg.inv(S)
 
@@ -136,14 +152,14 @@ def update(X_hat_t, P_t, Z_t, R_t):
 
     y = Z - hx
     X_t = X_hat_t + (K * y)
-    
+
     # update the covariance matrices
     I = np.eye(X_hat_t.shape[0])
     P_t = (I - (K * J_H)) * P_t
  
-    x_pos.append(float(X_t[0]))
-    y_pos.append(float(X_t[1]))
-    head.append(float(X_t[2]))
+    # x_pos.append(float(X_t[0]))
+    # y_pos.append(float(X_t[1]))
+    # head.append(float(X_t[2]))
 
     return X_t, P_t
 
@@ -155,18 +171,21 @@ def extended_kalman_filter(X_hat_t, P_t, Q_t, R_t):
         this with all previous measurements.  Calls plot() to graphically represent the results.
 
         Inputs:
-        - X_hat_t (the initial state vector)
-        - P_t (the initial state vector's covariance matrix)
-        - Q_t (the process noise matrix)
-        - R_t (the measurement noise matrix)
+        - X_hat_t (12x1 matrix: the initial state vector)
+        - P_t (12x6 matrix: the initial state vector's covariance matrix)
+        - Q_t (12x1 matrix: the process noise matrix)
+        - R_t (12x1: the measurement noise matrix)
 
         Outputs:
-        - Calls plot() to make a graph of the results
+        - X_t (12x1 matrix: the final state estimate)
+        - P_t (12x6 matrix: the final state estimate's covariance matrix)
     """
+    # CHANGE THIS FOR LIVE SYSTEM
     for i in range(sensor_measurements.shape[1]):
         # calculate prediction of current state
         X_hat_t, P_hat_t = prediction(X_hat_t, P_t, Q_t)
 
+        # THIS WILL NEED TO BE CHANGED TO REFLECT LIVE SYSTEM
         Z_t = sensor_measurements[:, i]   # take all previous measurements as Z_t
 
         # update the predictions and their covariances
@@ -229,20 +248,28 @@ for i in range(len(lateral_tyre_stiffnesses)):
 
 #=================================================================================================================#
 
+# Yaw Moment of Inertia #
+
+yaw_of_intertia = mass * (wheel_base**2 + track_width**2) / 12.0
+
+#=================================================================================================================#
+
 # F_m Forumla?? #
 
 slip_angle = delta - arctan(vel_x / vel_y)
 
+# denotes front wheels
 F_x1 = longitudinal_tyre_stiffnesses * slip_ratio
+F_x2 = F_x1    # not sure on this
+
+# denotes rear wheels
 F_y1 = lateral_tyre_stiffnesses * slip_angle
+F_y2 = F_y1    # not sure on this
 
-f_M = (1/yaw_of_intertia) * ()
+length_front = 1    # distance from front to centre
+length_rear = 1     # distance from rear to centre
 
-#=================================================================================================================#
-
-# Yaw Moment of Inertia #
-
-yaw_of_intertia = mass * (wheel_base**2 + track_width**2) / 12.0
+f_M = (1/yaw_of_intertia) * (length_front*(F_x1*np.sin(slip_angle)+F_y1*np.cos(slip_angle)-length_rear*F_y2))
 
 #=================================================================================================================#
 
@@ -254,16 +281,12 @@ intertia_of_wheel = 0.5 * wheel_radius**2 * mass
 
 #=================================================================================================================#
 
-# driver code
+# driver code (PUT THIS IN MAIN)
 if __name__ == "__main__":
-    # set path variables
-    PATH = "data/data.csv"
-
-    # read in the data from the .csv dataset file
-    # !!!! CHANGE THIS FOR DIFFERENT DATASET FILES !!!!
-    date, time, millis, rollrate, pitchrate, yawrate, roll, pitch, yaw, speed, accel_x, accel_y, accel_z, heading, latitude, longitude, altitude = np.loadtxt(PATH, delimiter=',', unpack=True, 
-                    converters={0: bytespdate2num('%Y-%m-%d')}, skiprows=1)
-
+    """
+    Section contains conversions to suitable units.
+    Change this depending on units read from sensors.
+    """
     a = 2.0 * np.pi * (6378388.0 + altitude) / 360.0    # approx lat. and long. (converted to metres)
 
     # calculate rate of change for x and y
@@ -271,43 +294,74 @@ if __name__ == "__main__":
     change_y = np.cumsum(a * np.hstack((0.0, np.diff(latitude))))
 
     # sensor measurements
-    sensor_measurements = np.vstack((change_x, change_y, speed/3.6, yawrate/180.0*np.pi, accel_x))
+    sensor_measurements = np.vstack((change_x,
+                                     change_y,
+                                     heading*np.pi/180.0
+                                     speed_x/3.6,
+                                     speed_y/3.6,
+                                     yawrate/180.0*np.pi,
+                                     accel_x,
+                                     accel_y,
+                                     slip_ratio_FR,
+                                     slip_ratio_RR,
+                                     slip_ratio_FL,
+                                     slip_ratio_RL))
 
     # initial state vector X_hat_1
     X_hat_t = np.matrix([[change_x[0],                   # initial x pos (metres)
                           change_y[0],                   # initial y pos (metres)
                           heading[0] * np.pi / 180.0,    # initial heading (radians)
-                          speed[0] / 3.6,                # initial speed (m/s)
+                          speed_x[0] / 3.6,              # initial speed x component (m/s)
+                          speed_y[0] / 3.6,              # initial speed y component (m/s)
                           yawrate[0] * np.pi / 180.0,    # initial yawrate (radians)
-                          accel_x[0]]])                  # initial acceleration (m/s^-2) 
+                          accel_x[0],                    # initial acceleration in x direction (m/s^-2) 
+                          accel_y[0],                    # initial acceleration in y direction (m/s^-2)
+                          slip_ratio_FR[0],              # slip ratio of front right wheel
+                          slip_ratio_RR[0],              # slip ratio of rear right wheel
+                          slip_ratio_FL[0],              # slip ratio of front left wheel
+                          slip_ratio_RL[0]]])            # slip ratio of rear left
 
-    X_hat_t = X_hat_t.T  # transpose to make 6x1
+    X_hat_t = X_hat_t.T  # transpose to make 12x1
 
     # initial state covariance P_t
-    P_t = np.diag([1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0])
+    P_t = np.diag([1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0])
 
+    # CHANGE SLIP RATIO NOISE
     # process noise Q_t
     Q_t = np.diag([(1.0/50.0*0.5*8.8)**2,    # noise in gps (x component)
                    (1.0/50.0*0.5*8.8)**2,    # noise in gps (y component)
                    (1.0/50.0*0.1)**2,        # noise in heading
-                   (1.0/50.0*8.8)**2,        # noise in speed
+                   (1.0/50.0*8.8)**2,        # noise in speed (x component)
+                   (1.0/50.0*8.8)**2,        # noise in speed (y component)
                    (1.0/50.0)**2,            # noise in yawrate
-                    0.5**2])                 # noise in acceleration
+                    0.5**2,                  # noise in acceleration (x component)
+                    0.5**2,                  # noise in acceleration (y component)
+                    1.0,                     # noise in slip ratio (FR)
+                    1.0,                     # noise in slip ratio (RR)
+                    1.0,                     # noise in slip ratio (FL)
+                    1.0])                    # noise in slip ratio (RL)
 
+    # CHANGE SLIP RATIO NOISE
     # measurement noise R_t
     R_t = np.diag([5.0**2,    # noise in gps (x component)
                    5.0**2,    # noise in gps (y component)
-                   3.0**2,    # noise in speed
+                   0.1**2,    # noise in heading
+                   3.0**2,    # noise in speed (x component)
+                   3.0**2,    # noise in speed (y component)
                    0.1**2,    # noise in yawrate
-                   1.0**2])   # noise in acceleration
+                   1.0**2,    # noise in acceleration (x component)
+                   1.0**2,    # noise in acceleration (y component)
+                   1.0,       # noise in slip ratio (FR)
+                   1.0,       # noise in slip ratio (RR)
+                   1.0,       # noise in slip ratio (FL)
+                   1.0])      # noise in slip ratio (RL)
 
-    x_pos, y_pos, head = [], [], []
+    # x_pos, y_pos, head = [], [], []
 
     print("[+] UGRDV-21 - Velocity Estimation [+]\n")
 
     print("Workflow:")
     print("Running Extended Kalman Filter...")
-    print(f"Using {PATH.split('/')[-1]} as input data")
 
     # run the algorithm
     extended_kalman_filter(X_hat_t, P_t, Q_t, R_t)
