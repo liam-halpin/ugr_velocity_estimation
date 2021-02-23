@@ -83,26 +83,24 @@ def prediction(X_hat_t_1, P_t_1, Q_t):
 
     # DO STUFF WITH THIS
     # Calculating the Jacobian, A, with respect to the state vector X_hat_t
-    J_A_13 = float((X_hat_t[3]/X_hat_t[4]) * (np.cos(X_hat_t[4]*dt+X_hat_t[2]) - np.cos(X_hat_t[2])))
-    J_A_14 = float((1.0/X_hat_t[4]) * (np.sin(X_hat_t[4]*dt+X_hat_t[2]) - np.sin(X_hat_t[2])))
-    J_A_15 = float((dt*X_hat_t[3]/X_hat_t[4])*np.cos(X_hat_t[4]*dt+X_hat_t[2]) - (X_hat_t[3]/X_hat_t[4]**2)*(np.sin(X_hat_t[4]*dt+X_hat_t[2]) - np.sin(X_hat_t[2])))
-    
-    J_A_23 = float((X_hat_t[3]/X_hat_t[4]) * (np.sin(X_hat_t[4]*dt+X_hat_t[2]) - np.sin(X_hat_t[2])))
-    J_A_24 = float((1.0/X_hat_t[4]) * (-np.cos(X_hat_t[4]*dt+X_hat_t[2]) + np.cos(X_hat_t[2])))
-    J_A_25 = float((dt*X_hat_t[3]/X_hat_t[4])*np.sin(X_hat_t[4]*dt+X_hat_t[2]) - (X_hat_t[3]/X_hat_t[4]**2)*(-np.cos(X_hat_t[4]*dt+X_hat_t[2]) + np.cos(X_hat_t[2])))
+    J_ab1 = X_hat_t[3]*np.cos(X_hat_t[2]) - (X_hat[4]*np.sin(X_hat_t[2]))
+    J_ab2 = X_hat[4]*np.sin(X_hat_t[2]) + X_hat_t[3]*np.cos(X_hat_t[2])
+    J_ab3 = (1/m)*(force_rear_x-force_front_y*np.sin(dt)+m*X_hat_t[4]*X_hat_t[5])
+    J_ab4 = (1/m)*(force_rear_y+force_front_x*np.cos(dt)-m*X_hat_t[3]*X_hat_t[5])
+    J_ab5 = (1/intertia_x)*(force_front_y*load_front*np.cos(dt)-force_rear_y*load_rear*something)
 
     # jacobian matrix of A (CHANGE NUMBERS)
-    J_A = np.matrix([[1.0, 0.0, J_A_13, J_A_14, J_A_15, 0.0],
-                     [0.0, 1.0, J_A_23, J_A_24, J_A_25, 0.0],
-                     [0.0, 0.0, 1.0, 0.0, dt, 0.0],
-                     [0.0, 0.0, 0.0, 1.0, 0.0, dt],
-                     [0.0, 0.0, 0.0, 1.0, 0.0, dt],
+    J_A = np.matrix([[1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                     [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                     [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                     [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                     [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
                      [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
                      [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-                     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                     [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                     [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                     [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                     [0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
                      [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]])
     
     # error covariance in measurements (12x6 matrix)
@@ -269,7 +267,7 @@ F_y2 = F_y1    # not sure on this
 length_front = 1    # distance from front to centre
 length_rear = 1     # distance from rear to centre
 
-f_M = (1/yaw_of_intertia) * (length_front*(F_x1*np.sin(slip_angle)+F_y1*np.cos(slip_angle)-length_rear*F_y2))
+f_M = (1/yaw_of_intertia)*(length_front*(F_x1*np.sin(slip_angle)+F_y1*np.cos(slip_angle)-length_rear*F_y2))
 
 #=================================================================================================================#
 

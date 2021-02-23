@@ -1,0 +1,34 @@
+getWheelSpeeds() ->
+	lb_speed
+	rb_speed
+	lf_speed # doesn't update but we update them for future/data structure we use
+	rf_speed # doesn't update but we update them for future/data structure we use
+	steering
+
+getImu() ->
+	orientation: # probably is always pretty much exact cause cant find simulated so have fun :)
+	    x
+	    y
+	    z
+	    w
+	orientation_covariance: float[9] # since always exact (pretty much, i think) filled with 0.0 s
+	angular_velocity: 
+	    x
+	    y
+	    z
+	angular_velocity_covariance: float[9]
+	linear_acceleration: 
+	    x
+	    y
+	    z
+	linear_acceleration_covariance: float[9]
+
+getGps() ->
+	status: # not sure if updates but part of data structure. same for all sub variables
+	    status
+	    service
+	latitude
+	longitude
+	altitude
+	position_covariance: float[9]
+	position_covariance_type # is a set value; not sure is useful but part of data structure and we update :)
